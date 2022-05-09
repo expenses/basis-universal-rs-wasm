@@ -54,8 +54,6 @@ static MODULE: OnceCell<ModuleWrapper> = OnceCell::new();
 pub async fn wasm_init() -> Result<(), ()> {
     let module = Module::new().await;
 
-    web_sys::console::log_1(&module);
-
     MODULE.set(ModuleWrapper(module)).map_err(drop)
 }
 
