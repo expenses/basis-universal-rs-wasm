@@ -1,4 +1,4 @@
-use once_cell::sync::OnceCell;
+use std::cell::RefCell;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen(module = "/basis_universal/webgl/transcoder/build/basis_transcoder.js")]
@@ -36,25 +36,16 @@ extern "C" {
     ) -> bool;
 }
 
-struct ModuleWrapper(Module);
-
-impl std::fmt::Debug for Module {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Module")
-    }
+std::thread_local! {
+    static MODULE: RefCell<Option<Module>> = RefCell::new(None);
 }
 
-// Wasm doesn't use threads... for the most part.
-// Todo: update when that changes.
-unsafe impl Send for ModuleWrapper {}
-unsafe impl Sync for ModuleWrapper {}
-
-static MODULE: OnceCell<ModuleWrapper> = OnceCell::new();
-
-pub async fn wasm_init() -> Result<(), ()> {
+pub async fn wasm_init() {
     let module = Module::new().await;
 
-    MODULE.set(ModuleWrapper(module)).map_err(drop)
+    MODULE.with(|local_module| {
+        *local_module.borrow_mut() = Some(module);
+    });
 }
 
 pub fn transcode_uastc_slice(
@@ -74,27 +65,29 @@ pub fn transcode_uastc_slice(
     channel1: i32,
     decode_flags: u32,
 ) -> bool {
-    MODULE.get().unwrap().0.transcode_uastc_slice(
-        dst_blocks,
-        num_blocks_x,
-        num_blocks_y,
-        image_data,
-        fmt_int,
-        output_block_or_pixel_stride_in_bytes,
-        bc1_allow_threecolor_blocks,
-        has_alpha,
-        orig_width,
-        orig_height,
-        output_row_pitch_in_blocks_or_pixels,
-        output_rows_in_pixels,
-        channel0,
-        channel1,
-        decode_flags,
-    )
+    MODULE.with(|module| {
+        module.borrow().as_ref().unwrap().transcode_uastc_slice(
+            dst_blocks,
+            num_blocks_x,
+            num_blocks_y,
+            image_data,
+            fmt_int,
+            output_block_or_pixel_stride_in_bytes,
+            bc1_allow_threecolor_blocks,
+            has_alpha,
+            orig_width,
+            orig_height,
+            output_row_pitch_in_blocks_or_pixels,
+            output_rows_in_pixels,
+            channel0,
+            channel1,
+            decode_flags,
+        )
+    })
 }
 
 pub fn initialize_basis() {
-    MODULE.get().unwrap().0.initialize_basis();
+    MODULE.with(|module| module.borrow().as_ref().unwrap().initialize_basis());
 }
 
 impl Module {
@@ -172,6 +165,6 @@ extern "C" {
 
 impl BasisFile {
     pub fn new(array: &js_sys::Uint8Array) -> Self {
-        MODULE.get().unwrap().0.create_basis_file(array)
+        MODULE.with(|module| module.borrow().as_ref().unwrap().create_basis_file(array))
     }
 }
