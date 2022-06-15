@@ -2,6 +2,7 @@
 name = "basis-universal-wasm"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 [dependencies]
 js-sys = "0.3.57"
