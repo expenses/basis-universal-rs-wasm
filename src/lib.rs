@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen(module = "/basis_universal/webgl/transcoder/build/basis_transcoder.js")]
 extern "C" {
-    #[wasm_bindgen(js_name = default)]
+    #[wasm_bindgen(js_name = BASIS)]
     async fn init(map: wasm_bindgen::JsValue) -> wasm_bindgen::JsValue;
 
     #[wasm_bindgen]
